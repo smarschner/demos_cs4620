@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>WebGL 3D Model Viewer Using three.js</title>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="three.js"></script>
+    <script src="Detector.js"></script>
+    <script src="OrbitControls.js"></script>
+    <script src="OBJLoader.js"></script>
+    <script src="MTLLoader.js"></script>
+
+    <style>
+        body {
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            background: hsl(0, 0%, 10%);
+        }
+
+        div#overlay {
+            position: absolute;
+            left: 5px;
+            top: 5px;
+        }
+
+        div#overlay p {
+            font-family: Helvetica, sans-serif;
+            font-weight: bold;
+        }
+
+        form#loadform {
+        }
+    </style>
+
+</head>
+<body>
+
+<div id="container">
+</div>
+
+
+<div id="overlay">
+    <form id="loadform">
+        <input type="file" name="fileToLoad" id="fileToLoad">
+        <input type="submit" value="Load" name="submit">
+    </form>
+    <p>[L] Lighting: <span id="lighting_state">off</span></p>
+    <p>[N] Normals: <span id="normals_state">off</span></p>
+</div>
+
+    <script>
+
+        document.getElementById("loadform").addEventListener('submit', function (event) {
+            event.preventDefault();
+            load_obj(this.fileToLoad.files);
+        });
+
+        if (!Detector.webgl) {
+            Detector.addGetWebGLMessage();
+        }
+
+        const AMBIENT = 0.7;
+
+        var container;
+
+        var camera, controls, scene, renderer;
+        var lighting, ambient, keyLight, fillLight, backLight;
+        var materials, root;
+
+        var windowHalfX = window.innerWidth / 2;
+        var windowHalfY = window.innerHeight / 2;
+
+        var showNormals, normalLines;
+
+        init();
+        animate();
+
+        function init() {
+
+            container = document.getElementById('container');
+
+            /* Camera */
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+            camera.position.z = 3;
+
+            /* Scene */
+
+            scene = new THREE.Scene();
+            lighting = false;
+            showNormals = false;
+
+            ambient = new THREE.AmbientLight(0xffffff, AMBIENT);
+            scene.add(ambient);
+
+            keyLight = new THREE.DirectionalLight(new THREE.Color('hsl(30, 100%, 75%)'), 1.0);
+            keyLight.position.set(-100, 0, 100);
+
+            fillLight = new THREE.DirectionalLight(new THREE.Color('hsl(240, 100%, 75%)'), 0.75);
+            fillLight.position.set(100, 0, 100);
+
+            backLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            backLight.position.set(100, 0, -100).normalize();
+
+            /* Model */
+
+            var mtlLoader = new THREE.MTLLoader();
+            mtlLoader.setBaseUrl('assets/');
+            mtlLoader.setPath('assets/');
+            mtlLoader.load('test-object.mtl', function (mtls) {
+
+                materials = mtls;
+                materials.preload();
+
+				if (materials.materials.default.map) {
+					materials.materials.default.map.magFilter = THREE.NearestFilter;
+					materials.materials.default.map.minFilter = THREE.LinearFilter;
+				}
+
+                load_obj('test-object.obj');
+
+            });
+
+            /* Renderer */
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(new THREE.Color("hsl(0, 0%, 40%)"));
+
+            container.appendChild(renderer.domElement);
+
+            /* Controls */
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.25;
+            controls.enableZoom = false;
+
+            /* Events */
+
+            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('keydown', onKeyboardEvent, false);
+
+        }
+
+        function onWindowResize() {
+
+            windowHalfX = window.innerWidth / 2;
+            windowHalfY = window.innerHeight / 2;
+
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+        }
+
+        function onKeyboardEvent(e) {
+
+            if (e.keyIdentifier === "U+004C") { // L
+
+                lighting = !lighting;
+                document.getElementById('lighting_state').innerHTML = lighting ? "on" : "off";
+
+                if (lighting) {
+
+                    ambient.intensity = 0.25;
+                    scene.add(keyLight);
+                    scene.add(fillLight);
+                    scene.add(backLight);
+
+                } else {
+
+                    ambient.intensity = AMBIENT;
+                    scene.remove(keyLight);
+                    scene.remove(fillLight);
+                    scene.remove(backLight);
+
+                }
+
+            } else if (e.keyIdentifier === "U+004E") { // N
+
+                showNormals = !showNormals;
+                document.getElementById('normals_state').innerHTML = showNormals ? "on" : "off";
+
+                if (showNormals) {
+                    scene.add(normalLines);
+                } else {
+                    scene.remove(normalLines);
+                }
+
+            }
+
+        }
+
+        function animate() {
+
+            requestAnimationFrame(animate);
+
+            controls.update();
+
+            render();
+
+        }
+
+        function render() {
+
+            renderer.render(scene, camera);
+
+        }
+
+        function load_obj(source) {
+
+            function display_result(group) {
+
+                if (root) scene.remove(root);
+                root = group;
+                scene.add(group);
+
+                var center = new THREE.Vector3();
+                var nCenter = 0;
+
+                normalLines = new THREE.Group();
+
+                group.children.map(function (object) {
+
+                    // find center -- bit lame approach
+                    if (object.geometry) {
+                        object.geometry.computeBoundingSphere();
+                        center.add(object.geometry.boundingSphere.center);
+                        nCenter += 1;
+                    }
+
+                    // set material to our preferred material
+                    object.material.side = THREE.DoubleSide;
+
+                    // add normals
+                    lines = make_normals(object, 0.3);
+                    if (lines) normalLines.add(lines);
+                });
+
+                center.divideScalar(nCenter);
+                scene.position.set(-center.x, -center.y, -center.z);
+            }
+
+            var objLoader = new THREE.OBJLoader();
+            objLoader.setMaterials(materials);
+
+            if (typeof source == "string") {
+                objLoader.setPath('assets/');
+                objLoader.load('two-tri.obj', display_result, function () {}, console.log);
+            } else {
+                if (source && source.length > 0)
+                    objLoader.loadFile(source[0], display_result, function () {}, console.log);
+            }
+        }
+
+
+        function make_normals(object, scale) {
+
+            // Create a Line geometry that will draw the normals for the given object.
+            // For now assumes the object is a non-indexed mesh.
+
+            var geom = object.geometry;
+            var posns = geom.getAttribute('position');
+            var norms = geom.getAttribute('normal');
+            if (norms) {
+                var n = norms.count;
+
+                linePosns = [];
+
+                if (n != posns.count) {
+                    console.error("Help! normals and positions different length!");
+                }
+                for (let i = 0; i < norms.count; i++) {
+                    linePosns.push(posns.getX(i), posns.getY(i), posns.getZ(i));
+                    linePosns.push(
+                        posns.getX(i) + scale * norms.getX(i), 
+                        posns.getY(i) + scale * norms.getY(i), 
+                        posns.getZ(i) + scale * norms.getZ(i)
+                    );
+                }
+
+                var buffergeometry = new THREE.BufferGeometry();
+                buffergeometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(linePosns), 3));
+                var material = new THREE.LineBasicMaterial();
+                return new THREE.LineSegments(buffergeometry, material);
+            }
+
+        }
+
+    </script>
+
+</body>
+</html>
