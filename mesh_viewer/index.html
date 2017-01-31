@@ -219,6 +219,7 @@
             function display_result(group) {
 
                 if (root) scene.remove(root);
+                if (showNormals && normalLines) scene.remove(normalLines);
                 root = group;
                 scene.add(group);
 
@@ -226,6 +227,7 @@
                 var nCenter = 0;
 
                 normalLines = new THREE.Group();
+                if (showNormals) scene.add(normalLines);
 
                 group.children.map(function (object) {
 
@@ -253,7 +255,7 @@
 
             if (typeof source == "string") {
                 objLoader.setPath('assets/');
-                objLoader.load('two-tri.obj', display_result, function () {}, console.log);
+                objLoader.load('test-object.obj', display_result, function () {}, console.log);
             } else {
                 if (source && source.length > 0)
                     objLoader.loadFile(source[0], display_result, function () {}, console.log);
