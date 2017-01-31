@@ -162,7 +162,8 @@
 
         function onKeyboardEvent(e) {
 
-            if (e.keyIdentifier === "U+004C") { // L
+            if (e.keyCode === 76 ||
+                e.key === 'l' || e.key == 'L') {
 
                 lighting = !lighting;
                 document.getElementById('lighting_state').innerHTML = lighting ? "on" : "off";
@@ -183,7 +184,8 @@
 
                 }
 
-            } else if (e.keyIdentifier === "U+004E") { // N
+            } else if (e.keyCode === 78 ||
+                       e.key === 'n' || e.key == 'N') {
 
                 showNormals = !showNormals;
                 document.getElementById('normals_state').innerHTML = showNormals ? "on" : "off";
