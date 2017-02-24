@@ -4,35 +4,49 @@
 		<title>CS4620 View Explorer</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-				font-family: Monospace;
-				overflow: hidden;
-			}
-		</style>
+		<link rel="stylesheet" href="css/view_explore.css"> 
 	</head>
 	<body>
 	<div id="container">
-				<div id="controlBar" style="text-align: center;">
-					<input type="file" id="meshInputFile" style="display: none;" onchange="loadFile(this.files[0])">
-					<input type="button" id="meshInputButton" value="Select OBJ File" onclick="document.getElementById('meshInputFile').click()">
-					<input type="file" id="texInputFile" style="display: none;" onchange="loadTexture(this.files[0])">
-					<input type="button" id="texInputButton" value="Select Texture File" onclick="document.getElementById('texInputFile').click()">
-					<label><input type="checkbox" id="showAxesCheckbox" onchange="toggleAxes(this.checked)" checked="true">Show Axes</label>
-					<label><input type="checkbox" id="showWireframeCheckbox" onchange="toggleWireframe(this.checked)" checked="true">Show Wireframe</label>
-					<br>
-					Left click + drag to orbit. Right click + drag to pan. Scroll to zoom.
-				</div>
-				<table id="4views">
-					<tr>
-						<td><canvas id="cameraview" style="width:600; height:400"></canvas></td>
-						<td><canvas id="worldspace" style="width:600; height:400"></canvas></td>
-					</tr>
-					<tr>
-						<td><canvas id="eyespace" style="width:600; height:400"></canvas></td>
-						<td><canvas id="clipspace" style="width:600; height:400"></canvas></td>
-					</tr>
-				</table>
+		<h1>CS4620 <span class="subtitle">View Explorer</span></h1>
+		<table id="4views" class="center">
+			<tr>
+				<td>
+					<h2>Camera view</h2>
+					<canvas id="cameraview"></canvas>
+				</td>
+				<td><h2>World space</h2>
+					<canvas id="worldspace"></canvas>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<h2>Eye space</h2>
+					<canvas id="eyespace"></canvas>
+				</td>
+				<td>
+					<h2>Clip space</h2>
+					<canvas id="clipspace"></canvas>
+				</td>
+			</tr>
+		</table>
+		<div id="controlBar">
+			<input type="file" id="meshInputFile" style="display: none;" onchange="loadFile(this.files[0])">
+			<input type="button" id="meshInputButton" value="Select OBJ File" onclick="document.getElementById('meshInputFile').click()">
+			<input type="file" id="texInputFile" style="display: none;" onchange="loadTexture(this.files[0])">
+			<input type="button" id="texInputButton" value="Select Texture File" onclick="document.getElementById('texInputFile').click()">
+			<label><input type="checkbox" id="showAxesCheckbox" onchange="toggleAxes(this.checked)" checked="true">Show Axes</label>
+			<label><input type="checkbox" id="showWireframeCheckbox" onchange="toggleWireframe(this.checked)" checked="true">Show Wireframe</label>
+			<br>
+			Left click + drag to orbit. Right click + drag to pan. Scroll to dolly.
+			<br>
+			<label>Field of view: <input type="range" id="fovRange" min="10" max="90" step="1" value="30" 
+				oninput="views[0].setFov(this.value)"></label>
+			<label>Near: <input type="range" id="nearRange" min="0.01" max="5" step="0.01" value="1" 
+				oninput="views[0].setNear(this.value)"></label>
+			<label>Far: <input type="range" id="farRange" min="5" max="50" step="0.1" value="20" 
+				oninput="views[0].setFar(this.value)"></label>
+		</div>
 	</div>
 
 		<script src="js/three.min.js"></script>
@@ -126,38 +140,54 @@
 			function initView(canvasId) {
 				var canvas = document.getElementById(canvasId);
 
-				var near = (canvasId == 'cameraview') ? 1 : 0.1;
-				var far = (canvasId == 'cameraview') ? 20 : 50;
-				var camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, near, far);
-				camera.position.z = 5;
-
 				var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true }); // WebGLRenderer CanvasRenderer
 				renderer.setClearColor(0x707080);
 				renderer.setPixelRatio(window.devicePixelRatio);
 				renderer.setSize(600, 400);
 
-				var controls = new THREE.OrbitControls(camera, renderer.domElement);
+				var camera, controls;
+				switch (canvasId) {
+					case 'cameraview':
+						camera = new THREE.PerspectiveCamera(30, 1.5, 1, 20);
+						camera.position.z = 5;
+						controls = new THREE.OrbitControls(camera, renderer.domElement);
+						break;
+
+					case 'worldspace':
+						camera = new THREE.PerspectiveCamera(30, 1.5, 0.1, 50);
+						camera.position.x = 5;
+						camera.position.y = 3;
+						camera.position.z = 10;
+						controls = new THREE.OrbitControls(camera, renderer.domElement);
+						break;
+
+					case 'eyespace':
+						camera = new THREE.PerspectiveCamera(30, 1.5, 0.1, 50);
+						camera.position.x = 5;
+						camera.position.y = 3;
+						camera.position.z = 10;
+						controls = new THREE.OrbitControls(camera, renderer.domElement);
+						controls.target.z = -2;
+						break;
+
+					case 'clipspace':
+						camera = new THREE.OrthographicCamera(-3, 3, 2, -2, 0.1, 50);
+						camera.position.x = 3;
+						camera.position.y = 4;
+						camera.position.z = 5;
+						controls = new THREE.OrbitControls(camera, renderer.domElement);
+						break;
+				}
+
 
 				window.addEventListener('resize', onWindowResize, false);
 
 				var self = {
 					render: function () {
-						// var tempLightGroup = lightGroup.clone(true);
-						// scene.add(tempLightGroup);
-						// tempLightGroup.applyMatrix(camera.matrix);
-
-						// var tempCubeGroup = cubeGroup.clone(true);
-						// scene.add(tempCubeGroup);
-						// tempCubeGroup.applyMatrix(self.getCubeMatrix());
-
 						lightGroup.matrix.copy(camera.matrix);
 						geomGroup.matrix.copy(self.getGeomMatrix());
 						cubeGroup.matrix.copy(self.getCubeMatrix());
-
 						renderer.render(scene, camera);
-
-						// scene.remove(tempCubeGroup);
-						// scene.remove(tempLightGroup);
 					},
 					update: function () {
 						controls.update();
@@ -173,6 +203,18 @@
 					},
 					getProjMatrix: function () {
 						return camera.projectionMatrix;
+					},
+					setFov: function(fov) {
+						camera.fov = Number(fov);
+						camera.updateProjectionMatrix();
+					},
+					setNear: function(near) {
+						camera.near = Number(near);
+						camera.updateProjectionMatrix();
+					},
+					setFar: function(far) {
+						camera.far = Number(far);
+						camera.updateProjectionMatrix();
 					}
 				};
 
@@ -213,8 +255,14 @@
 
 				scene = new THREE.Scene();
 
-				axesGroup = new THREE.AxisHelper(1.5);
+				// axesGroup = new THREE.AxisHelper(1.5);
+				axesGroup = new THREE.Group();
+				axesGroup.add(new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 2, 0xff4444));
+				axesGroup.add(new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 2, 0x00aa00));
+				axesGroup.add(new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 0), 2, 0x6666ff));
+				axesGroup.add(new THREE.GridHelper(10, 10));
 				scene.add(axesGroup);
+
 
 				lightGroup = new THREE.Group();
 				var light1 = new THREE.PointLight(0xffffff, 0.8);
@@ -230,7 +278,6 @@
 				cubeGroup.add(makeWireCube());
 				cubeGroup.matrixAutoUpdate = false;
 				scene.add(cubeGroup);
-				console.log(cubeGroup);
 
 				geomGroup = new THREE.Group();
 				geomGroup.matrixAutoUpdate = false;
@@ -301,6 +348,10 @@
 				} else {
 					wireframeMaterial.opacity = 0.0;
 				}
+			}
+
+			function setZoom(fov) {
+				views[0].setFov(fov);
 			}
 
 		</script>
