@@ -1,6 +1,5 @@
 body {
 	font-family: Helvetica;
-	overflow: hidden;
 }
 div#controlBar {
 	font-size: 14px;
@@ -51,4 +50,7 @@ h2 {
 }
 input {
 	vertical-align: middle;
+}
+.micetype {
+	font-size: 40%;
 }
