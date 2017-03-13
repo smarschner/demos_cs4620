@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CS 4621: Lecture 2 -- Exhibit #1: Using uniform variables</title>
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Exhibit #1: Using uniform variables</h1>
+
+    <div id="canvas_div"></div>
+
+    <h2>What we did here</h2>
+
+    <p>
+        This example produces the same behavior as before, but it has only one fragment shader.  The color of the surface is provided via a uniform variable <code>diffuseColor</code> that is set to different values when each of the two spheres is drawn.
+    </p>
+    <p>
+        This way uniforms (besides the ones Three.js provides by itself) get handed to shader programs in Three.js is by putting an entry called <code>uniforms</code> in the parameters that are used to create the material:
+        <pre class="prettyprint"><code class="language-js">uniforms: {
+    'diffuseColor': { type: 'v3', value: new THREE.Vector3(0.4, 0.6, 1.0) }
+},</code></pre>
+        The <code>type</code> field encodes the type of uniform variable this data is meant for; <code>3v</code> corresponding to the GLSL type <code>vec3</code>.
+    </p>
+</div>
+
+<script src="js/jquery.js"></script>
+<script src="js/bootstrap.js"></script>
+
+<script id="vertexShader" type="x-shader/x-vertex">
+
+void main() {
+    // Calculate Projected Point
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+</script>
+
+<script id="fragmentShader" type="x-shader/x-fragment">
+    precision highp float;
+
+    uniform vec3 diffuseColor;
+
+    void main() {
+        gl_FragColor = vec4(diffuseColor, 1.0);
+    }
+</script>
+
+<script src="js/three.min.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/OBJLoader.js"></script>
+
+<script>
+
+if (!Detector.webgl) {
+    Detector.addGetWebGLMessage();
+}
+
+var camera, controls, scene, renderer;
+
+var CANVAS_WIDTH = 720;
+var CANVAS_HEIGHT = 405;
+
+function init() {
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setClearColor(0x707080);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(CANVAS_WIDTH, CANVAS_HEIGHT);
+    document.getElementById('canvas_div').appendChild(renderer.domElement);
+
+    camera = new THREE.PerspectiveCamera(70, CANVAS_WIDTH / CANVAS_HEIGHT, 0.01, 50);
+    camera.position.z = 5;
+
+    scene = new THREE.Scene();
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    
+    var sphere1 = new THREE.Mesh( 
+        new THREE.SphereBufferGeometry( 1, 32, 16 ),
+        new THREE.ShaderMaterial( {
+            uniforms: {
+                'diffuseColor': { type: 'v3', value: new THREE.Vector3(0.4, 0.6, 1.0) }
+            },
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('fragmentShader').textContent,
+        })
+    );
+    sphere1.translateX(-1.5);
+    scene.add( sphere1 );
+
+    var sphere2 = new THREE.Mesh( 
+        new THREE.SphereBufferGeometry( 1, 32, 16 ),
+        new THREE.ShaderMaterial( {
+            uniforms: {
+                'diffuseColor': { type: 'v3', value: new THREE.Vector3(1.0, 0.6, 0.4) }
+            },
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('fragmentShader').textContent,
+        })
+    );
+    sphere2.translateX(1.5);
+    scene.add( sphere2 );
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+init();
+animate();
+
+</script>
+
+</body>
+</html>

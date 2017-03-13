@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CS 4621: Lecture 2 -- Exhibit #0: Getting Triangles on the screen</title>
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Exhibit #0: Getting Triangles on the screen</h1>
+
+    <div id="canvas_div"></div>
+
+    <h2>What we did here</h2>
+
+    <ul>
+        <li>We are using basic Three.js to set up:
+            <ul>
+                <li>A WebGL canvas in the div just above this text;</li>
+                <li>A scene with two spheres in it;</li>
+                <li>A camera with an orbit controller; and</li>
+                <li>A <code>ShaderMaterial</code> that asks Three.js to use a particular shader program
+                when drawing each sphere. </li>
+            </ul>
+        </li>
+        <li>The shader programs are very minimal:
+            <ul>
+                <li>The vertex program takes positions from object to clip space.  Notice that the vertex attribute <code>position</code> is magically defined, as are the matrices <code>modelViewMatrix</code> and <code>projectionMatrix</code>, although they're not declared in the shader code and it's not a GLSL builtin.  This is because, behind the scenes, Three.js appends some declarations to the beginning of our shader code, for a standard set of uniforms and attributes it always provides.  Three.js has some <a href="https://threejs.org/docs/api/renderers/webgl/WebGLProgram.html">rather terse documentation</a> of what these attributes are.</li>
+                <li>Each sphere has its own fragment program, and each always outputs a constant color.</li>
+            </ul>
+        </li>
+    </ul>
+    <p>Three.js turns on hidden surface removal by default, so the <i>z</i>-buffer is being used to discard fragments that should be hidden.</p>
+    <p>You can see the shaders in your browser by opening up the developer tools.  They are sitting right there in the text of the HTML page.
+</div>
+
+<script src="js/jquery.js"></script>
+<script src="js/bootstrap.js"></script>
+
+<script id="vertexShader" type="x-shader/x-vertex">
+
+void main() {
+    // Calculate Projected Point
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+</script>
+
+<script id="fragmentShader1" type="x-shader/x-fragment">
+    precision highp float;
+
+    void main() {
+        gl_FragColor = vec4(0.4, 0.6, 1.0, 1.0);
+    }
+</script>
+
+<script id="fragmentShader2" type="x-shader/x-fragment">
+    precision highp float;
+
+    void main() {
+        gl_FragColor = vec4(1.0, 0.6, 0.4, 1.0);
+    }
+</script>
+
+<script src="js/three.min.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/OBJLoader.js"></script>
+
+<script>
+
+if (!Detector.webgl) {
+    Detector.addGetWebGLMessage();
+}
+
+var camera, controls, scene, renderer;
+
+var CANVAS_WIDTH = 720;
+var CANVAS_HEIGHT = 405;
+
+function init() {
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setClearColor(0x707080);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(CANVAS_WIDTH, CANVAS_HEIGHT);
+    document.getElementById('canvas_div').appendChild(renderer.domElement);
+
+    camera = new THREE.PerspectiveCamera(70, CANVAS_WIDTH / CANVAS_HEIGHT, 0.01, 50);
+    camera.position.z = 5;
+
+    scene = new THREE.Scene();
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    
+    var sphere1 = new THREE.Mesh( 
+        new THREE.SphereBufferGeometry( 1, 32, 16 ),
+        new THREE.ShaderMaterial( {
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('fragmentShader1').textContent,
+        })
+    );
+    sphere1.translateX(-1.5);
+    scene.add( sphere1 );
+
+    var sphere2 = new THREE.Mesh( 
+        new THREE.SphereBufferGeometry( 1, 32, 16 ),
+        new THREE.ShaderMaterial( {
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('fragmentShader2').textContent,
+        })
+    );
+    sphere2.translateX(1.5);
+    scene.add( sphere2 );
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+init();
+animate();
+
+</script>
+
+</body>
+</html>

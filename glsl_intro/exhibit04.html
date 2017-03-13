@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CS 4621: Lecture 2 -- Exhibit #4: Fragment Phong Lighting</title>
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Exhibit #4: Fragment Phong Lighting</h1>
+
+    <div id="canvas_div"></div>
+
+    <h2>What we did here</h2>
+
+    <ul>
+        <li>In addition to the <code>diffuseColor</code> uniform, we introduced a second, the <code>lightPosition</code>.</li>
+        <li>We introduced a varying variable called <code>surfaceColor</code>.</li>
+        <li>Lighting is computed in the vertex shader; the fragment shader just passes the interpolated color along.
+    </ul>
+</div>
+
+<script src="js/jquery.js"></script>
+<script src="js/bootstrap.js"></script>
+
+<script id="vertexShader" type="x-shader/x-vertex">
+
+varying vec3 eyeSpacePosition;
+varying vec3 eyeSpaceNormal;
+
+void main() {
+
+    // Transform things into eye space
+    eyeSpacePosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+    eyeSpaceNormal = normalMatrix * normal;
+
+    // Calculate projected point
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+</script>
+
+<script id="fragmentShader" type="x-shader/x-fragment">
+precision highp float;
+
+uniform vec3 diffuseColor;
+uniform vec3 specularColor;
+uniform float phongExponent;
+uniform vec3 lightPosition;
+
+varying vec3 eyeSpacePosition;
+varying vec3 eyeSpaceNormal;
+
+void main() {
+    vec3 lightDir = normalize(lightPosition - eyeSpacePosition);
+    vec3 viewDir = normalize(-eyeSpacePosition);
+    vec3 halfDir = normalize(viewDir + lightDir);
+    vec3 normal = normalize(eyeSpaceNormal);
+    vec3 diffuseComponent = diffuseColor * dot(lightDir, normal);
+    vec3 specularComponent = specularColor * pow(max(0.0, dot(halfDir, normal)), phongExponent);
+    vec3 surfaceColor = diffuseComponent + specularComponent;
+
+    gl_FragColor = vec4(surfaceColor, 1.0);
+}
+</script>
+
+<script src="js/three.min.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/OBJLoader.js"></script>
+
+<script>
+
+if (!Detector.webgl) {
+    Detector.addGetWebGLMessage();
+}
+
+var camera, controls, scene, renderer;
+
+var CANVAS_WIDTH = 720;
+var CANVAS_HEIGHT = 405;
+
+function init() {
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setClearColor(0x707080);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(CANVAS_WIDTH, CANVAS_HEIGHT);
+    document.getElementById('canvas_div').appendChild(renderer.domElement);
+
+    camera = new THREE.PerspectiveCamera(70, CANVAS_WIDTH / CANVAS_HEIGHT, 0.01, 50);
+    camera.position.z = 5;
+
+    scene = new THREE.Scene();
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    var lightPosition = new THREE.Vector3(10, 10, 10);
+    
+    var sphere1 = new THREE.Mesh( 
+        new THREE.SphereBufferGeometry( 1, 32, 16 ),
+        new THREE.ShaderMaterial( {
+            uniforms: {
+                'lightPosition': { type: 'v3', value: lightPosition },
+                'diffuseColor': { type: 'v3', value: new THREE.Vector3(0.4, 0.6, 1.0) },
+                'specularColor': { type: 'v3', value: new THREE.Vector3(0.8, 0.8, 0.8) },
+                'phongExponent': { type: 'f', value: 100 }
+            },
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('fragmentShader').textContent,
+        })
+    );
+    sphere1.translateX(-1.5);
+    scene.add( sphere1 );
+
+    var sphere2 = new THREE.Mesh( 
+        new THREE.SphereBufferGeometry( 1, 32, 16 ),
+        new THREE.ShaderMaterial( {
+            uniforms: {
+                'lightPosition': { type: 'v3', value: lightPosition },
+                'diffuseColor': { type: 'v3', value: new THREE.Vector3(1.0, 0.6, 0.4) },
+                'specularColor': { type: 'v3', value: new THREE.Vector3(0.8, 0.8, 0.8) },
+                'phongExponent': { type: 'f', value: 50 }
+            },
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('fragmentShader').textContent,
+        })
+    );
+    sphere2.translateX(1.5);
+    scene.add( sphere2 );
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+init();
+animate();
+
+</script>
+
+</body>
+</html>
