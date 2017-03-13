@@ -18,11 +18,14 @@
 
     <h2>What we did here</h2>
 
+    The code is (nearly) identical to the code from Exhibit 3.  The difference is that the shading code has been moved to the fragment shader.
     <ul>
-        <li>In addition to the <code>diffuseColor</code> uniform, we introduced a second, the <code>lightPosition</code>.</li>
-        <li>We introduced a varying variable called <code>surfaceColor</code>.</li>
-        <li>Lighting is computed in the vertex shader; the fragment shader just passes the interpolated color along.
+        <li>Instead of the <code>surfaceColor</code> varying, we now have the eye space position and normal instead.</li>
+        <li>The uniforms that specify shading parameters have been moved to the fragment shader.</li>
+        <li>The interpolated eye space normal is not used directly.  Instead it is first normalized.</li>
     </ul>
+
+    Normalizing the normal is important!  Try removing the normalization.  What happens?
 </div>
 
 <script src="js/jquery.js"></script>
@@ -59,7 +62,7 @@ void main() {
     vec3 lightDir = normalize(lightPosition - eyeSpacePosition);
     vec3 viewDir = normalize(-eyeSpacePosition);
     vec3 halfDir = normalize(viewDir + lightDir);
-    vec3 normal = normalize(eyeSpaceNormal);
+    vec3 normal = eyeSpaceNormal;//normalize(eyeSpaceNormal);
     vec3 diffuseComponent = diffuseColor * dot(lightDir, normal);
     vec3 specularComponent = specularColor * pow(max(0.0, dot(halfDir, normal)), phongExponent);
     vec3 surfaceColor = diffuseComponent + specularComponent;
