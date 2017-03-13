@@ -62,7 +62,7 @@ void main() {
     vec3 lightDir = normalize(lightPosition - eyeSpacePosition);
     vec3 viewDir = normalize(-eyeSpacePosition);
     vec3 halfDir = normalize(viewDir + lightDir);
-    vec3 normal = eyeSpaceNormal;//normalize(eyeSpaceNormal);
+    vec3 normal = normalize(eyeSpaceNormal);
     vec3 diffuseComponent = diffuseColor * dot(lightDir, normal);
     vec3 specularComponent = specularColor * pow(max(0.0, dot(halfDir, normal)), phongExponent);
     vec3 surfaceColor = diffuseComponent + specularComponent;
