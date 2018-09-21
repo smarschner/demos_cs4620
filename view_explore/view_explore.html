@@ -25,8 +25,8 @@
 					<canvas id="eyespace"></canvas>
 				</td>
 				<td>
-					<h2>Clip space</h2>
-					<canvas id="clipspace"></canvas>
+					<h2>Normalized device coordinates</h2>
+					<canvas id="NDC"></canvas>
 				</td>
 			</tr>
 		</table>
@@ -170,7 +170,7 @@
 						controls.target.z = -2;
 						break;
 
-					case 'clipspace':
+					case 'NDC':
 						camera = new THREE.OrthographicCamera(-3, 3, 2, -2, 0.05, 100);
 						camera.position.x = 3;
 						camera.position.y = 4;
@@ -222,7 +222,7 @@
 			}
 
 			function init() {
-				views = ['cameraview', 'worldspace', 'eyespace', 'clipspace'].map(initView);
+				views = ['cameraview', 'worldspace', 'eyespace', 'NDC'].map(initView);
 				views[2].getGeomMatrix = function () {
 					return views[0].getCameraMatrix();
 				}
