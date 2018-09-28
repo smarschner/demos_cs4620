@@ -11,7 +11,7 @@
 <div id="container">
 	<h1>CS4620 <span class="subtitle">Perspective Interpolation</span></h1>
 	<div id="content">
-		<canvas id="theCanvas" width="640" height="480"></canvas>
+		<canvas id="theCanvas" width="864" height="486"></canvas>
 	</div>
 	<div id="controlBar">
 		<label><input type="checkbox" id="perspCorrectCheckbox" onchange="perspCorrect = this.checked" checked="true">Perspective Correction</label>
@@ -179,7 +179,7 @@
         gl.bindTexture(gl.TEXTURE_2D, null);
 
         var projMat = mat4.create();
-        mat4.perspective(projMat, 60.0*Math.PI/180.0, 640/480, 0.1, 100.0);
+        mat4.perspective(projMat, 60.0*Math.PI/180.0, 864/486, 0.1, 100.0);
 
         var viewMat = mat4.create();
         mat4.lookAt(viewMat,
