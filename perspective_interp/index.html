@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>CS4620 Perspective Interpolation Demo</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link rel="stylesheet" href="css/view_explore.css"> 
+</head>
+<body>
+
+<div id="container">
+	<h1>CS4620 <span class="subtitle">Perspective Interpolation</span></h1>
+	<div id="content">
+		<canvas id="theCanvas" width="640" height="480"></canvas>
+	</div>
+	<div id="controlBar">
+		<label><input type="checkbox" id="perspCorrectCheckbox" onchange="perspCorrect = this.checked" checked="true">Perspective Correction</label>
+	</div>
+</div>
+
+<script src="js/jquery-3.1.1.min.js"></script>
+<script src="js/gl-matrix-min.js"></script>
+
+<script id="vertexShader" type="x-shader/x-vertex">
+    attribute vec3 vert_position;
+    attribute vec2 vert_texCoord;
+
+    uniform mat4 xform_projMat;
+    uniform mat4 xform_viewMat;
+    uniform mat4 xform_modelMat;
+    uniform bool perspCorrect;
+
+    varying vec2 geom_texCoord;
+
+    void main() {
+        gl_Position = xform_projMat * (xform_viewMat * (xform_modelMat * vec4(vert_position, 1.0)));
+        if (!perspCorrect)
+        	gl_Position /= gl_Position.w;
+        geom_texCoord = vert_texCoord;
+    }
+</script>
+
+<script id="fragmentShader" type="x-shader/x-fragment">
+    precision highp float;
+
+    varying vec2 geom_texCoord;
+
+    uniform sampler2D texture;
+
+    void main() {
+        gl_FragColor = texture2D(texture, geom_texCoord);
+    }
+</script>
+
+<script>
+	perspCorrect = true;
+
+    function initializeWebGL(canvas) {
+        // Getting WebGL context the right way
+        var gl = null;
+        try {
+            gl = canvas[0].getContext("experimental-webgl");
+            if (!gl) {
+                gl = canvas[0].getContext("webgl");
+            }
+        } catch (error) {
+            // NO-OP
+        }
+        if (!gl) {
+            alert("Could not get WebGL context!");
+            throw new Error("Could not get WebGL context!");
+        }
+        return gl;
+    }
+
+    function createShader(gl, shaderScriptId) {
+        var shaderScript = $("#" + shaderScriptId);
+        var shaderSource = shaderScript[0].text;
+        var shaderType = null;
+        if (shaderScript[0].type == "x-shader/x-vertex") {
+            shaderType = gl.VERTEX_SHADER;
+        } else if (shaderScript[0].type == "x-shader/x-fragment") {
+            shaderType = gl.FRAGMENT_SHADER;
+        } else {
+            throw new Error("Invalid shader type: " + shaderScript[0].type)
+        }
+        var shader = gl.createShader(shaderType);
+        gl.shaderSource(shader, shaderSource);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            var infoLog = gl.getShaderInfoLog(shader);
+            gl.deleteShader(shader);
+            throw new Error("An error occurred compiling the shader: " + infoLog);
+        } else {
+            return shader;
+        }
+    }
+
+    function createGlslProgram(gl, vertexShaderId, fragmentShaderId) {
+        var program = gl.createProgram();
+        gl.attachShader(program, createShader(gl, vertexShaderId));
+        gl.attachShader(program, createShader(gl, fragmentShaderId));
+        gl.linkProgram(program);
+        gl.validateProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            var infoLog = gl.getProgramInfoLog(program);
+            gl.deleteProgram(program);
+            throw new Error("An error occurred linking the program: " + infoLog);
+        } else {
+            return program;
+        }
+    }
+
+    function createShape(gl, vertexData, indexData) {
+        var shape = {};
+
+        var vertexArray = new Float32Array(vertexData);
+        var vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        var indexArray = new Uint16Array(indexData);
+        var indexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexArray, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+        shape.vertexBuffer = vertexBuffer;
+        shape.indexBuffer = indexBuffer;
+        shape.size = indexData.length;
+
+        return shape;
+    }
+
+    function drawShape(gl, program, shape) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.vertexBuffer);
+        var positionLocation = gl.getAttribLocation(program, "vert_position");
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 4 * 5, 0);
+        var texCoordLocation = gl.getAttribLocation(program, "vert_texCoord");
+        gl.enableVertexAttribArray(texCoordLocation);
+        gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 4 * 5, 4 * 3);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.indexBuffer);
+        gl.drawElements(gl.TRIANGLES, shape.size, gl.UNSIGNED_SHORT, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+        gl.useProgram(null);
+    }
+
+    function startWebGL() {
+        var image = new Image();
+        image.onload = function() {
+            runWebGL(image);
+        };
+        image.src = "checker.jpg";
+
+		// Account for cached state in some browsers
+		document.getElementById('perspCorrectCheckbox').onchange();
+    }
+
+    function runWebGL(image) {
+        var gl = initializeWebGL($("#theCanvas"));
+
+        var program = createGlslProgram(gl, "vertexShader", "fragmentShader");
+        ["texture", "xform_projMat", "xform_viewMat", "xform_modelMat", "perspCorrect"]
+        .forEach(function(name) {
+            program[name] = gl.getUniformLocation(program, name);
+        });
+
+        // Create the Cornell texture.
+        var texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        var projMat = mat4.create();
+        mat4.perspective(projMat, 60.0*Math.PI/180.0, 640/480, 0.1, 100.0);
+
+        var viewMat = mat4.create();
+        mat4.lookAt(viewMat,
+            vec3.fromValues(0.0, 0.0, 2.0),
+            vec3.fromValues(0.0, 0.0, 0.0),
+            vec3.fromValues(0.0, 1.0, 0.0));
+
+        var modelMat = mat4.create();
+        mat4.identity(modelMat);
+
+        var isPlaying = true;
+        $(document).keydown(function(event) {
+            if (event.key == " ") {
+                isPlaying = !isPlaying;
+	            return false;
+            }
+        });
+
+
+        var vertexData = [
+            -1.0, -1.0, 0.0,
+            0.0, 0.0,
+            1.0, -1.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0, 0.0,
+            1.0, 1.0,
+            -1.0, 1.0, 0.0,
+            0.0, 1.0
+        ];
+        var indexData = [
+            0, 1, 2, 0, 2, 3
+        ];
+        var rectangle = createShape(gl, vertexData, indexData);
+
+        var lastTime = performance.now();
+        var rotateAngle = 0.0;
+        var rate = 0.001;
+
+        function updateWebGL() {
+            var time = performance.now();
+            var elasped = time - lastTime;
+            lastTime = time;
+
+            if (isPlaying) {
+                rotateAngle += rate * elasped;
+                mat4.fromXRotation(modelMat, -rotateAngle);
+            }
+
+            gl.clearColor(0.9, 0.5, 0.5, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.useProgram(program);
+
+            if (program.texture != null) {
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+                gl.uniform1i(program.texture, 0);
+            }
+            if (program.xform_projMat != null) {
+                gl.uniformMatrix4fv(program.xform_projMat, false, projMat);
+            }
+            if (program.xform_viewMat != null) {
+                gl.uniformMatrix4fv(program.xform_viewMat, false, viewMat);
+            }
+            if (program.xform_modelMat != null) {
+                gl.uniformMatrix4fv(program.xform_modelMat, false, modelMat);
+            }
+            if (program.perspCorrect != null) {
+                gl.uniform1i(program.perspCorrect, perspCorrect);
+            }
+
+            drawShape(gl, program, rectangle);
+
+            gl.useProgram(null);
+
+            // Reschedule the next frame.
+            window.requestAnimationFrame(updateWebGL);
+        }
+
+        window.requestAnimationFrame(updateWebGL);
+    }
+    startWebGL();
+
+</script>
+
+</body>
+</html>
