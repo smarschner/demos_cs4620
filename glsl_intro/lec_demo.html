@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CS 4620: Lecture Demos for Pipeline</title>
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+<div class="container">
+    <h1>CS4620 Pipeline lecture demo</h1>
+
+    <div id="canvas_div" class="row">
+    </div>
+    <div class="row" style="margin-top: 15px;">
+        <div class="col-sm-1">
+            <select id="programName">
+                <option value="0" selected="selected">Constant color without depth</option>
+                <option value="1">Constant color with depth</option>
+                <option value="2">Gouraud shading, Lambertian lighting</option>
+                <option value="3">Gouraud shading, Phong lighting</option>
+                <option value="4">Phong shading, Lambertian lighting</option>
+                <option value="5">Phong shading, Phong lighting</option>
+                <option value="6">Phong shading, textured diffuse</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<script src="js/jquery.js"></script>
+<script src="js/bootstrap.js"></script>
+
+
+<!-- Basic flat color shading -->
+
+<script id="vsBasicNoDepth" type="x-shader/x-vertex">
+    void main() {
+        // Calculate Projected Point
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        gl_Position.z = 0.0;
+    }
+</script>
+
+<script id="vsBasicDepth" type="x-shader/x-vertex">
+    void main() {
+        // Calculate Projected Point
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+</script>
+
+<script id="fsConstColor" type="x-shader/x-fragment">
+    precision highp float;
+
+    uniform vec3 diffuseColor;
+
+    void main() {
+        gl_FragColor = vec4(diffuseColor, 1.0);
+    }
+</script>
+
+
+<!-- Gouraud shading -->
+
+<script id="vsGouraudLamb" type="x-shader/x-vertex">
+    // The diffuse component for surface shading
+    uniform vec3 diffuseColor;
+
+    // Position of light, in eye space
+    uniform vec3 lightPosition;
+
+    varying vec3 surfaceColor;
+
+    void main() {
+
+        // Transform things into eye space
+        vec3 eyeSpacePosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+        vec3 eyeSpaceNormal = normalize(normalMatrix * normal);
+
+        // Calculate surface color
+        vec3 lightDir = normalize(lightPosition - eyeSpacePosition);
+        surfaceColor = diffuseColor * dot(lightDir, eyeSpaceNormal);
+
+        // Calculate projected point
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+</script>
+
+<script id="vsGouraudPhong" type="x-shader/x-vertex">
+uniform vec3 diffuseColor;
+uniform vec3 specularColor;
+uniform float phongExponent;
+uniform vec3 lightPosition;
+
+varying vec3 surfaceColor;
+
+void main() {
+
+    // Transform things into eye space
+    vec3 eyeSpacePosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+    vec3 eyeSpaceNormal = normalize(normalMatrix * normal);
+
+    // Calculate surface color
+    vec3 lightDir = normalize(lightPosition - eyeSpacePosition);
+    vec3 viewDir = normalize(-eyeSpacePosition);
+    vec3 halfDir = normalize(viewDir + lightDir);
+    vec3 diffuseComponent = diffuseColor * dot(lightDir, eyeSpaceNormal);
+    vec3 specularComponent = specularColor * pow(max(0.0, dot(halfDir, eyeSpaceNormal)), phongExponent);
+    surfaceColor = diffuseComponent + specularComponent;
+
+    // Calculate projected point
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+</script>
+
+<script id="fsGouraud" type="x-shader/x-fragment">
+    precision highp float;
+
+    varying vec3 surfaceColor;
+
+    void main() {
+        gl_FragColor = vec4(surfaceColor, 1.0);
+    }
+</script>
+
+
+<!-- Phong lighting -->
+<script id="vsPhongPhong" type="x-shader/x-vertex">
+
+varying vec3 eyeSpacePosition;
+varying vec3 eyeSpaceNormal;
+
+void main() {
+
+    // Transform things into eye space
+    eyeSpacePosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+    eyeSpaceNormal = normalMatrix * normal;
+
+    // Calculate projected point
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+</script>
+
+<script id="fsPhongLamb" type="x-shader/x-fragment">
+precision highp float;
+
+uniform vec3 diffuseColor;
+uniform vec3 lightPosition;
+
+varying vec3 eyeSpacePosition;
+varying vec3 eyeSpaceNormal;
+
+void main() {
+    vec3 lightDir = normalize(lightPosition - eyeSpacePosition);
+    vec3 viewDir = normalize(-eyeSpacePosition);
+    vec3 normal = normalize(eyeSpaceNormal);
+    vec3 surfaceColor = diffuseColor * dot(lightDir, normal);
+
+    gl_FragColor = vec4(surfaceColor, 1.0);
+}
+
+<script id="fsPhong" type="x-shader/x-fragment">
+precision highp float;
+
+uniform vec3 diffuseColor;
+uniform vec3 specularColor;
+uniform float phongExponent;
+uniform vec3 lightPosition;
+
+varying vec3 eyeSpacePosition;
+varying vec3 eyeSpaceNormal;
+
+void main() {
+    vec3 lightDir = normalize(lightPosition - eyeSpacePosition);
+    vec3 viewDir = normalize(-eyeSpacePosition);
+    vec3 halfDir = normalize(viewDir + lightDir);
+    vec3 normal = normalize(eyeSpaceNormal);
+    vec3 diffuseComponent = diffuseColor * dot(lightDir, normal);
+    vec3 specularComponent = specularColor * pow(max(0.0, dot(halfDir, normal)), phongExponent);
+    vec3 surfaceColor = diffuseComponent + specularComponent;
+
+    gl_FragColor = vec4(surfaceColor, 1.0);
+}
+</script>
+
+
+<script src="js/three.min.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/OBJLoader.js"></script>
+
+<script>
+
+if (!Detector.webgl) {
+    Detector.addGetWebGLMessage();
+}
+
+var camera, controls, scene, renderer;
+var sphere1, sphere2, materials;
+
+function changeProgram(name) {
+    sphere1.material = materials[name][0];
+    sphere2.material = materials[name][1];
+}
+
+var CANVAS_WIDTH = 720;
+var CANVAS_HEIGHT = 405;
+
+function init() {
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setClearColor(0x707080);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(CANVAS_WIDTH, CANVAS_HEIGHT);
+    document.getElementById('canvas_div').appendChild(renderer.domElement);
+
+    camera = new THREE.PerspectiveCamera(70, CANVAS_WIDTH / CANVAS_HEIGHT, 0.01, 50);
+    camera.position.z = 5;
+
+    scene = new THREE.Scene();
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    var lightPosition = new THREE.Vector3(10, 10, 10);
+    
+    colors = [new THREE.Vector3(0.4, 0.6, 1.0), new THREE.Vector3(1.0, 0.6, 0.4)];
+    materials = [
+        colors.map(color => new THREE.ShaderMaterial( {
+            uniforms: {
+                'diffuseColor': { type: 'v3', value: color }
+            },
+            vertexShader: document.getElementById('vsBasicNoDepth').textContent,
+            fragmentShader: document.getElementById('fsConstColor').textContent,
+        })),
+        colors.map(color => new THREE.ShaderMaterial( {
+            uniforms: {
+                'diffuseColor': { type: 'v3', value: color }
+            },
+            vertexShader: document.getElementById('vsBasicDepth').textContent,
+            fragmentShader: document.getElementById('fsConstColor').textContent,
+        })),
+        colors.map(color => new THREE.ShaderMaterial( {
+            uniforms: {
+                'lightPosition': { type: 'v3', value: lightPosition },
+                'diffuseColor': { type: 'v3', value: color }
+            },
+            vertexShader: document.getElementById('vsGouraudLamb').textContent,
+            fragmentShader: document.getElementById('fsGouraud').textContent,
+        })),
+        colors.map(color => new THREE.ShaderMaterial( {
+            uniforms: {
+                'lightPosition': { type: 'v3', value: lightPosition },
+                'diffuseColor': { type: 'v3', value: new THREE.Vector3(0.4, 0.6, 1.0) },
+                'specularColor': { type: 'v3', value: new THREE.Vector3(0.5, 0.5, 0.5) },
+                'phongExponent': { type: 'f', value: 50 }
+            },
+            vertexShader: document.getElementById('vsGouraudPhong').textContent,
+            fragmentShader: document.getElementById('fsGouraud').textContent,
+        })),
+        colors.map(color => new THREE.ShaderMaterial( {
+            uniforms: {
+                'lightPosition': { type: 'v3', value: lightPosition },
+                'diffuseColor': { type: 'v3', value: new THREE.Vector3(0.4, 0.6, 1.0) },
+                'specularColor': { type: 'v3', value: new THREE.Vector3(0.5, 0.5, 0.5) },
+                'phongExponent': { type: 'f', value: 50 }
+            },
+            vertexShader: document.getElementById('vsPhong').textContent,
+            fragmentShader: document.getElementById('fsPhongLamb').textContent,
+        })),
+        colors.map(color => new THREE.ShaderMaterial( {
+            uniforms: {
+                'lightPosition': { type: 'v3', value: lightPosition },
+                'diffuseColor': { type: 'v3', value: new THREE.Vector3(0.4, 0.6, 1.0) },
+                'specularColor': { type: 'v3', value: new THREE.Vector3(0.5, 0.5, 0.5) },
+                'phongExponent': { type: 'f', value: 50 }
+            },
+            vertexShader: document.getElementById('vsPhong').textContent,
+            fragmentShader: document.getElementById('fsPhongPhong').textContent,
+        }))
+    ];
+
+    var progSelect = document.getElementById('programName');
+    progSelect.onchange = function (e) {
+        changeProgram(e.target.value);
+    }
+
+    sphere1 = new THREE.Mesh( 
+        new THREE.SphereBufferGeometry( 1, 16, 8 ),
+        materials[progSelect.value][0]
+    );
+    sphere1.translateX(-1.5);
+    scene.add( sphere1 );
+
+    sphere2 = new THREE.Mesh( 
+        new THREE.SphereBufferGeometry( 1, 32, 16 ),
+        materials[progSelect.value][1]
+    );
+    sphere2.translateX(1.5);
+    scene.add( sphere2 );
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+init();
+animate();
+
+</script>
+
+</body>
+</html>
