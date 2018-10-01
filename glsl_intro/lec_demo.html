@@ -128,7 +128,7 @@ void main() {
 
 
 <!-- Phong lighting -->
-<script id="vsPhongPhong" type="x-shader/x-vertex">
+<script id="vsPhong" type="x-shader/x-vertex">
 
 varying vec3 eyeSpacePosition;
 varying vec3 eyeSpaceNormal;
@@ -162,7 +162,7 @@ void main() {
     gl_FragColor = vec4(surfaceColor, 1.0);
 }
 
-<script id="fsPhong" type="x-shader/x-fragment">
+<script id="fsPhongPhong" type="x-shader/x-fragment">
 precision highp float;
 
 uniform vec3 diffuseColor;
