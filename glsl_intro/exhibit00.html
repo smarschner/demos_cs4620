@@ -30,7 +30,7 @@
         </li>
         <li>The shader programs are very minimal:
             <ul>
-                <li>The vertex program takes positions from object to clip space.  Notice that the vertex attribute <code>position</code> is magically defined, as are the matrices <code>modelViewMatrix</code> and <code>projectionMatrix</code>, although they're not declared in the shader code and it's not a GLSL builtin.  This is because, behind the scenes, Three.js appends some declarations to the beginning of our shader code, for a standard set of uniforms and attributes it always provides.  Three.js has some <a href="https://threejs.org/docs/api/renderers/webgl/WebGLProgram.html">rather terse documentation</a> of what these attributes are.</li>
+                <li>The vertex program takes positions from object to clip space.  Notice that the vertex attribute <code>position</code> is magically defined, as are the matrices <code>modelViewMatrix</code> and <code>projectionMatrix</code>, although they're not declared in the shader code and it's not a GLSL builtin.  This is because, behind the scenes, Three.js appends some declarations to the beginning of our shader code, for a standard set of uniforms and attributes it always provides.  Three.js has some <a href="https://threejs.org/docs/#api/en/renderers/webgl/WebGLProgram">rather terse documentation</a> of what these attributes are.</li>
                 <li>Each sphere has its own fragment program, and each always outputs a constant color.</li>
             </ul>
         </li>
