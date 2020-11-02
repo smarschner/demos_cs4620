@@ -254,7 +254,7 @@ function init() {
         colors.map(color => new THREE.ShaderMaterial( {
             uniforms: {
                 'lightPosition': { type: 'v3', value: lightPosition },
-                'diffuseColor': { type: 'v3', value: new THREE.Vector3(0.4, 0.6, 1.0) },
+                'diffuseColor': { type: 'v3', value: color },
                 'specularColor': { type: 'v3', value: new THREE.Vector3(0.5, 0.5, 0.5) },
                 'phongExponent': { type: 'f', value: 50 }
             },
@@ -264,7 +264,7 @@ function init() {
         colors.map(color => new THREE.ShaderMaterial( {
             uniforms: {
                 'lightPosition': { type: 'v3', value: lightPosition },
-                'diffuseColor': { type: 'v3', value: new THREE.Vector3(0.4, 0.6, 1.0) },
+                'diffuseColor': { type: 'v3', value: color },
                 'specularColor': { type: 'v3', value: new THREE.Vector3(0.5, 0.5, 0.5) },
                 'phongExponent': { type: 'f', value: 50 }
             },
@@ -274,7 +274,7 @@ function init() {
         colors.map(color => new THREE.ShaderMaterial( {
             uniforms: {
                 'lightPosition': { type: 'v3', value: lightPosition },
-                'diffuseColor': { type: 'v3', value: new THREE.Vector3(0.4, 0.6, 1.0) },
+                'diffuseColor': { type: 'v3', value: color },
                 'specularColor': { type: 'v3', value: new THREE.Vector3(0.5, 0.5, 0.5) },
                 'phongExponent': { type: 'f', value: 50 }
             },
